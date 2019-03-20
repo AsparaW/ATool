@@ -1,4 +1,3 @@
-package com.mantouland.fakezhihuribao;
 
 import org.json.JSONArray;
 import org.json.JSONException;
@@ -10,7 +9,6 @@ import java.lang.reflect.Type;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Objects;
 
 /**
  * Created by asparaw on 2019/3/19.
@@ -27,23 +25,20 @@ public class Ason {
      * @return
      */
     public static <T> T fromJson(String jsonString,T object){
-            try {
-                Type type=object.getClass().getGenericSuperclass();
-                if (type instanceof  ParameterizedType){
-                    JSONObject pointer=new JSONObject(jsonString);
-                    return jsonDFS(pointer,object);
-                }
-            } catch (IllegalAccessException e) {
-                e.printStackTrace();
-            } catch (NoSuchFieldException e) {
-                e.printStackTrace();
-            } catch (JSONException e) {
-                e.printStackTrace();
-            } catch (InstantiationException e) {
-                e.printStackTrace();
-            }
-            return null;
+        try {
+                JSONObject pointer=new JSONObject(jsonString);
+                return jsonDFS(pointer,object);
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+        } catch (NoSuchFieldException e) {
+            e.printStackTrace();
+        } catch (JSONException e) {
+            e.printStackTrace();
+        } catch (InstantiationException e) {
+            e.printStackTrace();
         }
+        return null;
+    }
 
     /***
      * pass in the bean class
@@ -100,7 +95,7 @@ public class Ason {
                     }
                 }else {
                     for (int i=0;i<jsonArray.length();i++){
-                       list.add(jsonArray.get(i));
+                        list.add(jsonArray.get(i));
                     }
                 }
                 field.set(bean,list);
@@ -113,22 +108,31 @@ public class Ason {
 
     @SuppressWarnings("unchecked")
     private static <T> T jsonDFS(JSONObject pointer, T object) throws IllegalAccessException, NoSuchFieldException, JSONException, InstantiationException {
-        T bean= (T) Objects.requireNonNull(object.getClass().getSuperclass()).newInstance();
         Iterator<String> keys= pointer.keys();
         while (keys.hasNext()){
             String name= keys.next();
-            Field field= bean.getClass().getDeclaredField(name);
+            Field field;
+            Type checkType=object.getClass().getGenericSuperclass();
+            if (checkType instanceof ParameterizedType){
+                field= object.getClass().getSuperclass().getDeclaredField(name);
+            }else {
+                field= object.getClass().getDeclaredField(name);
+            }
             field.setAccessible(true);
             Object value=pointer.get(name);
             if (value instanceof JSONObject){
+                Object newObject;
                 Class setType;
-                Type checkType=object.getClass().getGenericSuperclass();
                 if (checkType instanceof  ParameterizedType){
                     setType= (Class) ((ParameterizedType)object.getClass().getGenericSuperclass()).getActualTypeArguments()[0];
+                    newObject=setType.newInstance();
+                    field.set(object,jsonDFS((JSONObject) value,newObject));
                 }else {
                     setType=field.getType();
+                    newObject=setType.newInstance();
+
                 }
-                field.set(bean,jsonDFS((JSONObject) value,setType));
+                field.set(object,jsonDFS((JSONObject) value,newObject));
             }else if (value instanceof JSONArray){
                 JSONArray jsonArray= (JSONArray) value;
                 List list=new ArrayList();
@@ -137,21 +141,22 @@ public class Ason {
                 }else if (jsonArray.get(0) instanceof JSONArray || jsonArray.get(0) instanceof  JSONObject){
                     ParameterizedType pt = (ParameterizedType) field.getGenericType();
                     Class type = (Class) pt.getActualTypeArguments()[0];
+                    Object newObject =type.newInstance();
                     //get the generic type from the original list
                     for (int i=0;i<jsonArray.length();i++){
-                        list.add(jsonDFS((JSONObject) jsonArray.get(i),type));
+                        list.add(jsonDFS((JSONObject) jsonArray.get(i),newObject));
                     }
                 }else {
                     for (int i=0;i<jsonArray.length();i++){
                         list.add(jsonArray.get(i));
                     }
                 }
-                field.set(bean,list);
+                field.set(object,list);
             }else {
-                field.set(bean,value);
+                field.set(object,value);
             }
         }
-        return bean;
+        return object;
     }
-    
+
 }
