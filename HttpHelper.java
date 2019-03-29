@@ -5,6 +5,10 @@ package pers.asparaw.fakeneteasecloudmusic.test;
  */
 
 
+
+
+import org.json.JSONObject;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -16,6 +20,10 @@ import java.util.Map;
 import java.util.Vector;
 
 import javax.net.ssl.HttpsURLConnection;
+
+import pers.asparaw.fakeneteasecloudmusic.test.impl.JsonCallBack;
+import pers.asparaw.fakeneteasecloudmusic.test.impl.NetCallBack;
+import pers.asparaw.fakeneteasecloudmusic.test.impl.StringCallBack;
 
 public class HTTPHelper {
 
@@ -41,6 +49,36 @@ public class HTTPHelper {
     }
 
 
+    private void doJsonString(final String urlString, final Map<String,String> parameters, final Map<String,String> properties, final boolean withLine, final JsonCallBack callBack, final Class clazz){
+        AExecutorPool.getInstance().execute(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    HTTPContent httpContent =send(urlString,_POST,parameters,properties,withLine);
+                    String string=httpContent.getContent();
+                    Object beanObject=Ason.fromJson(string,clazz);
+                    callBack.onSuccess(beanObject);
+                } catch (IOException e) {
+                    callBack.onFail(e);
+                }
+            }
+        });
+    }
+
+    private void doString(final String urlString, final Map<String,String> parameters, final Map<String,String> properties, final boolean withLine,final StringCallBack callBack){
+        AExecutorPool.getInstance().execute(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    HTTPContent httpContent =send(urlString,_POST,parameters,properties,withLine);
+                    String string=httpContent.getContent();
+                    callBack.onSuccess(string);
+                } catch (IOException e) {
+                    callBack.onFail(e);
+                }
+            }
+        });
+    }
     private void doGet(final String urlString, final Map<String,String> parameters, final Map<String,String> properties, final boolean withLine,final NetCallBack callBack){
         AExecutorPool.getInstance().execute(new Runnable() {
             @Override
@@ -74,14 +112,10 @@ public class HTTPHelper {
          * inbox get paras
          */
         if (type.equalsIgnoreCase(_GET)&&parameters!=null){
-            StringBuffer params=new StringBuffer();
             if (!parameters.isEmpty()){
-                params.append("?");
-                for (Map.Entry<String, String> entry : parameters.entrySet()) {
-                    params.append("&").append(entry.getKey()).append("=").append(parameters.get(entry.getValue()));
-                }
+                StringBuilder tempUrlString=new StringBuilder();
+                urlString= tempUrlString.append("?").append(paramBuilder(parameters)).toString();
             }
-            urlString+=params;
         }
         /***
          * set http request body
@@ -108,18 +142,21 @@ public class HTTPHelper {
             httpURLConnection.setDoInput(true);//make post-able
             httpURLConnection.setDoOutput(true);
             httpURLConnection.setUseCaches(false);
-            StringBuffer param = new StringBuffer();
-            for (Map.Entry<String, String> entry : parameters.entrySet()) {
-                param.append(entry.getKey()).append("=").append(entry.getValue()).append("&");
-            }
-            param.deleteCharAt(param.length()-1);
-            httpURLConnection.getOutputStream().write(param.toString().getBytes());
+            httpURLConnection.getOutputStream().write(paramBuilder(parameters).getBytes());
             httpURLConnection.getOutputStream().flush();
             httpURLConnection.getOutputStream().close();
         }
         return makeContent(urlString,httpURLConnection,withLine);
     }
 
+    private String paramBuilder(Map<String,String> parameters){
+        StringBuilder param = new StringBuilder();
+        for (Map.Entry<String, String> entry : parameters.entrySet()) {
+            param.append(entry.getKey()).append("=").append(entry.getValue()).append("&");
+        }
+        param.deleteCharAt(param.length()-1);
+        return param.toString();
+    }
     private HTTPContent makeContent(String urlString, HttpURLConnection httpURLConnection, boolean withLine){
         HTTPContent httpContent =new HTTPContent();
         BufferedReader bf;
@@ -183,7 +220,7 @@ public class HTTPHelper {
     /***
      *
      */
-    class HTTPContent {
+    public class HTTPContent {
         String urlString;
         int defaultPort;
         String file;

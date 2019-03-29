@@ -5,10 +5,13 @@ import android.os.Looper;
 import android.support.annotation.NonNull;
 
 
-
 import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+
+import pers.asparaw.fakeneteasecloudmusic.test.impl.LongCallBack;
 
 
 /**
@@ -38,12 +41,13 @@ public class AExecutorPool {
 
 
 
-    public <T> void submit(@NonNull Runnable task,T result){
-        executorService.submit(task,result);
+    public <T> Future<?> submit(@NonNull Runnable task,T result){
+        return executorService.submit(task,result);
     }
-    public <T> void submit(@NonNull Callable<T> task){
-        executorService.submit(task);
+    public <T> Future<?> submit(@NonNull Callable<T> task){
+        return executorService.submit(task);
     }
+
 
     public void submit(@NonNull Runnable task){
         executorService.submit(task);
@@ -56,12 +60,45 @@ public class AExecutorPool {
     /***
      * executePerformance method would return
      * the millis formatted time consumed
+     * CAUTION:First SINGLETON ONLY(BLOCK METHOD)
      * @param command is the passed in runnable
      */
-    public long executePerformance(@NonNull Runnable command){
-        long timeMillis=0L;
-        return  timeMillis;
+    public long executePerformance(@NonNull final Runnable command){
+
+        Callable callable=new Callable() {
+            @Override
+            public Object call() throws Exception {
+                long timeMillis=System.currentTimeMillis();
+                command.run();
+                timeMillis=System.currentTimeMillis()-timeMillis;
+                return timeMillis;
+            }
+        };
+        Future future=submit(callable);
+        try {
+            return (long) future.get();
+        } catch (ExecutionException e) {
+            e.printStackTrace();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+        return Long.MAX_VALUE;
     }
+    public void executePerformance(@NonNull final Runnable command,final LongCallBack threadCallBack){
+
+        Callable callable=new Callable() {
+            @Override
+            public Object call() throws Exception {
+                long timeMillis=System.currentTimeMillis();
+                command.run();
+                timeMillis=System.currentTimeMillis()-timeMillis;
+                threadCallBack.onSuccess(timeMillis);
+                return timeMillis;
+            }
+        };
+        submit(callable);
+    }
+
 
     public void post(@NonNull Runnable r){
         mHandler.post(r);
@@ -71,4 +108,8 @@ public class AExecutorPool {
         mHandler.postDelayed(r,delayMillis);
     }
 
+
 }
+
+
+
