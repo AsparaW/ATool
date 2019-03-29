@@ -113,7 +113,7 @@ public class HTTPHelper {
          */
         if (type.equalsIgnoreCase(_GET)&&parameters!=null){
             if (!parameters.isEmpty()){
-                StringBuilder tempUrlString=new StringBuilder();
+                StringBuilder tempUrlString=new StringBuilder(urlString);
                 urlString= tempUrlString.append("?").append(paramBuilder(parameters)).toString();
             }
         }
