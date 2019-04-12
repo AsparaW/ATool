@@ -1,16 +1,13 @@
 package pers.asparaw.fakeneteasecloudmusic.test;
 
-/**
- * Created by asparaw on 2019/3/27.
- */
 
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 
-
-
-import org.json.JSONObject;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
@@ -21,15 +18,22 @@ import java.util.Vector;
 
 import javax.net.ssl.HttpsURLConnection;
 
-import pers.asparaw.fakeneteasecloudmusic.test.impl.JsonCallBack;
-import pers.asparaw.fakeneteasecloudmusic.test.impl.NetCallBack;
-import pers.asparaw.fakeneteasecloudmusic.test.impl.StringCallBack;
+import pers.asparaw.fakeneteasecloudmusic.test.callback.impl.JsonCallBack;
+import pers.asparaw.fakeneteasecloudmusic.test.callback.impl.NetCallBack;
+import pers.asparaw.fakeneteasecloudmusic.test.callback.impl.StringCallBack;
+
+
+/**
+ * Created by asparaw on 2019/3/27.
+ */
 
 public class HTTPHelper {
 
     private static final String ERROR_MESSAGE = "http error response:";
     private static final int DEFAULT=0;
     private static final int DEFAULT_WITH_LINES=1;
+    private static final int BIG=1;
+    private static final int BIGGER=2;
     private static final String _POST="POST";
     private static final String _GET="GET";
     private static String defaultContentEncoding ;
@@ -48,6 +52,18 @@ public class HTTPHelper {
         return instanceHolder.instance;
     }
 
+    /***
+     * pic runner
+     * @param urlString
+     * @param type
+     */
+    public Bitmap doPic(final String urlString, final int type) {
+        try {
+            return sendPic(urlString,type);
+        } catch (IOException e) {
+        }
+        return null;
+    }
 
     private void doJsonString(final String urlString, final Map<String,String> parameters, final Map<String,String> properties, final boolean withLine, final JsonCallBack callBack, final Class clazz){
         AExecutorPool.getInstance().execute(new Runnable() {
@@ -106,6 +122,20 @@ public class HTTPHelper {
                 }
             });
     }
+
+    private Bitmap sendPic(String urlString, int type) throws IOException {
+                URL url;
+                HttpURLConnection httpURLConnection;
+                    url = new URL(urlString);
+                    if(urlString.contains("https"))
+                        httpURLConnection = (HttpsURLConnection) url.openConnection();
+                    else
+                        httpURLConnection = (HttpURLConnection) url.openConnection();
+                    httpURLConnection.setConnectTimeout(5000);
+                    httpURLConnection.setReadTimeout(5000);
+                    httpURLConnection.setDoInput(true);
+                    return makePicContent(urlString,httpURLConnection,type);
+    }
     private HTTPContent send(String urlString, String type, Map<String,String> parameters, Map<String,String> properties,boolean withLine)throws IOException{
         HttpURLConnection httpURLConnection;
         /***
@@ -156,6 +186,26 @@ public class HTTPHelper {
         }
         param.deleteCharAt(param.length()-1);
         return param.toString();
+    }
+
+    private Bitmap makePicContent(String urlString,HttpURLConnection httpURLConnection,int type){
+        try {
+            InputStream inputStream= httpURLConnection.getInputStream();
+            if (httpURLConnection.getResponseCode()==200){
+                httpURLConnection.disconnect();
+                return BitmapFactory.decodeStream(inputStream);
+            }else {
+                httpURLConnection.disconnect();
+                return null;
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }finally {
+            if (httpURLConnection!=null){
+                httpURLConnection.disconnect();
+            }
+        }
+        return null;
     }
     private HTTPContent makeContent(String urlString, HttpURLConnection httpURLConnection, boolean withLine){
         HTTPContent httpContent =new HTTPContent();
@@ -241,6 +291,7 @@ public class HTTPHelper {
         int readTimeout;
         Vector<String> contentCollection;
 
+
         public String getContent() {
             return content;
         }
@@ -319,32 +370,4 @@ public class HTTPHelper {
     }
 
 }
-
-
-
-/*
-        URL u;
-        HttpURLConnection httpURLConnection;
-        BufferedReader bf;
-        String readLine;
-        try {
-            u = new URL(url);
-            httpURLConnection = (HttpURLConnection) u.openConnection();
-            StringBuilder temp = null;
-            int responce = httpURLConnection.getResponseCode();
-            if (responce == 200) {
-                bf = new BufferedReader(new InputStreamReader(httpURLConnection.getInputStream(), "UTF-8"));
-                while ((readLine = bf.readLine()) != null) {
-                    temp = temp .append(readLine);
-                }
-                return temp.toString();
-            } else {
-                return ERROR_MESSAGE+responce;
-            }
-        } catch (MalformedURLException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        return null;*/
 

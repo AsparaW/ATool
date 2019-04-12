@@ -1,22 +1,37 @@
+package pers.asparaw.fakeneteasecloudmusic.test.security.Impl;
 
 import android.text.TextUtils;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 
+import pers.asparaw.fakeneteasecloudmusic.test.security.Security;
+
+
 /***
- * String Security
+ * String SecurityMD5
  * @author asparaw
  * @version 1
  */
-public class Security {
+public class SecurityMD5 implements Security {
+
+
+    private static class instanceHolder{
+        private static final SecurityMD5 instance =new SecurityMD5();
+    }
+    private SecurityMD5(){
+
+    }
+    public static SecurityMD5 getInstance(){
+        return instanceHolder.instance;
+    }
 
     /***
      * pass in the string return the md5
      * @param string
      * @return
      */
-    public static String getMD5(String string) {
+    public String encode(String string) {
         if (TextUtils.isEmpty(string)) {
             return "";
         }
