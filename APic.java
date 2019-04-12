@@ -124,8 +124,8 @@ public class APic {
     }
 
     //
-    void getImage(){
-
+    void getImage(PicCallBack picCallBack){
+        loadBitmap(picCallBack,makeTag());
     }
     private String makeTag(){
         if (builder.compressStrategyList!=null){
@@ -136,29 +136,29 @@ public class APic {
     }
 
 
-    private void loadBitmap(final PicCallBack picCallBack,final String url){
+    private void loadBitmap(final PicCallBack picCallBack,final String tag){
         AExecutorPool.getInstance().execute(new Runnable() {
             @Override
             public void run() {
                 Bitmap bitmap=null;
                 //Load From Mem
                 if (!builder.skipMemCache){
-                    bitmap=MemCache.getInstance().get(url);
+                    bitmap=MemCache.getInstance().get(tag);
                 }
                 //Load From CacheStrategy
                 if (bitmap==null){
-                    bitmap=builder.cacheStrategy.get(url);
+                    bitmap=builder.cacheStrategy.get(tag);
                 }
                 //Load From Http
                 if (bitmap==null){
-                    bitmap = url.contains("http")? readHttp(url):readFile(url);
+                    bitmap = tag.contains("http")? readHttp(mAddress):readFile(mAddress);
                 }
                 //Check
                 if (bitmap!=null){
                     bitmap=compress(bitmap);
-                    cache(bitmap,url);
+                    cache(bitmap,tag);
                 }else {
-                    runOnUIThread(picCallBack,null,new Exception("can't get pic url:"+url));
+                    runOnUIThread(picCallBack,null,new Exception("can't get pic url:"+tag));
                 }
             }
         });
